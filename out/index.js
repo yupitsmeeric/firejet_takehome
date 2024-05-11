@@ -56,33 +56,38 @@ function lint(code) {
         });
     });
 }
-function lintAST(ast) {
+function lintNode(node) {
     return __awaiter(this, void 0, void 0, function* () {
-        yield (0, traverse_1.default)(ast, {
+        // combine all quasis with an indicator
+        let quasis = [];
+        for (let quasi of node.quasis) {
+            quasis.push(quasi.value.raw);
+        }
+        let combinedString = quasis.join("__MY_STAND_IN_IDENTIFIER__");
+        // format the string
+        combinedString = yield lint(combinedString);
+        // combinedString = prettier.format(combinedString);
+        // place the formatted quasis back
+        quasis = combinedString.split("__MY_STAND_IN_IDENTIFIER__");
+        for (let i in node.quasis) {
+            node.quasis[i].value.raw = quasis[i];
+        }
+        // console.log(node);
+        return node;
+    });
+}
+function getNodes(ast, nodes) {
+    return __awaiter(this, void 0, void 0, function* () {
+        (0, traverse_1.default)(ast, {
             TemplateLiteral(path) {
-                return __awaiter(this, void 0, void 0, function* () {
-                    var _a;
-                    if ("leadingComments" in path.node) {
-                        const isTSX = (_a = path.node.leadingComments) === null || _a === void 0 ? void 0 : _a.some(comment => comment.value === "tsx");
-                        if (!isTSX) {
-                            return;
-                        } // if it doesn't have the tsx comment, skip
-                        // combine all quasis with an indicator
-                        let quasis = [];
-                        for (let quasi of path.node.quasis) {
-                            quasis.push(quasi.value.raw);
-                        }
-                        let combinedString = quasis.join("__MY_STAND_IN_IDENTIFIER__");
-                        // format the string
-                        combinedString = yield lint(combinedString);
-                        // combinedString = prettier.format(combinedString);
-                        // place the formatted quasis back
-                        quasis = combinedString.split("__MY_STAND_IN_IDENTIFIER__");
-                        for (let i in path.node.quasis) {
-                            path.node.quasis[i].value.raw = quasis[i];
-                        }
-                    }
-                });
+                var _a;
+                if ("leadingComments" in path.node) {
+                    const isTSX = (_a = path.node.leadingComments) === null || _a === void 0 ? void 0 : _a.some(comment => comment.value === "tsx");
+                    if (!isTSX) {
+                        return;
+                    } // if it doesn't have the tsx comment, skip
+                    nodes.push(path.node);
+                }
             }
         });
         return ast;
@@ -91,9 +96,11 @@ function lintAST(ast) {
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
         const inputPath = "./min_input.ts";
+        let nodes = [];
         const code = fs_1.default.readFileSync(inputPath, 'utf8');
         var ast = parser.parse(code, options);
-        ast = yield lintAST(ast);
+        getNodes(ast, nodes);
+        yield Promise.all(nodes.map(lintNode));
         const lintedCode = (0, generator_1.default)(ast);
         fs_1.default.writeFileSync("output.ts", lintedCode.code);
     });

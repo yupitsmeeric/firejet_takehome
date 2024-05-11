@@ -3,6 +3,7 @@ import traverse, { Node } from "@babel/traverse";
 import generate from "@babel/generator";
 import prettier from "prettier";
 import fs from "fs";
+import { TemplateLiteral } from "@babel/types";
 
 
 const options: parser.ParserOptions =  {
@@ -21,27 +22,34 @@ async function lint(code: string): Promise<string> {
   });
 }
 
-async function lintAST(ast: Node): Promise<Node> {
-  await traverse(ast, {
-    async TemplateLiteral(path){
+async function lintNode(node: TemplateLiteral): Promise<TemplateLiteral> {
+  // combine all quasis with an indicator
+  let quasis: Array<string> = [];
+  for (let quasi of node.quasis){
+      quasis.push(quasi.value.raw);
+  }
+  let combinedString: string = quasis.join("__MY_STAND_IN_IDENTIFIER__");
+  // format the string
+  combinedString = await lint(combinedString);
+  // combinedString = prettier.format(combinedString);
+  // place the formatted quasis back
+  quasis = combinedString.split("__MY_STAND_IN_IDENTIFIER__");
+  for (let i in node.quasis){
+      node.quasis[i].value.raw = quasis[i];
+  }
+  // console.log(node);
+  return node;
+}
+
+async function getNodes(ast: Node, nodes: Array<TemplateLiteral>) {
+  traverse(ast, {
+    TemplateLiteral(path){
         if ("leadingComments" in path.node){
         const isTSX = path.node.leadingComments?.some(comment => comment.value === "tsx");
         if (!isTSX){ return; } // if it doesn't have the tsx comment, skip
         
-        // combine all quasis with an indicator
-        let quasis: Array<string> = [];
-        for (let quasi of path.node.quasis){
-            quasis.push(quasi.value.raw);
-        }
-        let combinedString: string = quasis.join("__MY_STAND_IN_IDENTIFIER__");
-        // format the string
-        combinedString = await lint(combinedString);
-        // combinedString = prettier.format(combinedString);
-        // place the formatted quasis back
-        quasis = combinedString.split("__MY_STAND_IN_IDENTIFIER__");
-        for (let i in path.node.quasis){
-            path.node.quasis[i].value.raw = quasis[i];
-        }
+        nodes.push(path.node);
+        
         }
     }   
 });
@@ -50,12 +58,13 @@ return ast;
 
 async function main(){
   const inputPath: string = "./min_input.ts";
-
+  let nodes: Array<TemplateLiteral> = [];
   const code: string = fs.readFileSync(inputPath, 'utf8');
   
   var ast: Node = parser.parse(code, options);
 
-  ast = await lintAST(ast);
+  getNodes(ast, nodes);
+  await Promise.all(nodes.map(lintNode));
   const lintedCode = generate(ast);
   fs.writeFileSync("output.ts", lintedCode.code);
 

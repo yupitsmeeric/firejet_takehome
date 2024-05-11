@@ -1,6 +1,5 @@
 const myTypescriptString = /*jsx*//*tsx*/`console.log(${myText})
-
-
+;;;;;;;;;;;;;;;;;;// non linted
 
 const a = 9;;;;;;;;;;;;
 ;;;;;;var b = "hi";`
