@@ -95,7 +95,7 @@ function getNodes(ast, nodes) {
 }
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
-        const inputPath = "./min_input.ts";
+        const inputPath = "./input.ts";
         let nodes = [];
         const code = fs_1.default.readFileSync(inputPath, 'utf8');
         var ast = parser.parse(code, options);

@@ -57,7 +57,7 @@ return ast;
 }
 
 async function main(){
-  const inputPath: string = "./min_input.ts";
+  const inputPath: string = "./input.ts";
   let nodes: Array<TemplateLiteral> = [];
   const code: string = fs.readFileSync(inputPath, 'utf8');
   
