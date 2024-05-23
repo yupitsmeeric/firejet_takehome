@@ -13,8 +13,10 @@ Assume that each node will contain rearrangable DOM elements either in TS code o
 - For every design, find the 'center' by center = (x + width/2, y + height/2)
 - Find the 'center' of the user's screen size by center = (width/2, height/2)
 - Iterate against all centers to find the layout that is the 'closest' to the center of the screen size. 
-- If there is a need to choose which layout to serve in real time eg. according to the client's size in real time, then use Fortune's Algorithm (O(n lg(n))) to create a voronoi map and determine which layout's 'region' a certain screen size belongs to eg. using CSS breakpoints. 
-- Use the previously obtained boundaries to choose which layout to serve to the user
+- If there is a need to choose which layout to serve in real time eg. according to the client's size in real time, then use Fortune's Algorithm (O(n lg(n))) to create a voronoi map.
+- Use the 'centers' of each design as the sites of the voronoi map. The algorithm will return the boundaries of the areas which contain all the points closest to each site ie. we can find out which site/design is closest to a given point if we can determine which set of boundaries it obeys.
+- Starting with a user's given screen size and the appropriate design (initially determined by iterating through all the different design's 'centers' and finding the one closest to the user's screen size), every time there is a resize event, query to see if the current screen size stays within the initial design's boundary. 
+- If the screen size does not stay within the boundary, then query to see if the screen size fits in the boundaries of the adjacent designs
 
 **Grouping Nodes/Subtrees together:** To reduce the amount of redundancy, group repeated subtrees into separate components, then rearrange the components back into a tree based on the layouts whenever there is a need to view a specific layout. 
 
